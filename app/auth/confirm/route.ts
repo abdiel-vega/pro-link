@@ -17,6 +17,11 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
+      if (type === "signup") {
+        return redirect(
+          "/auth/login?message=Email confirmed successfully. You can now log in."
+        );
+      }
       // redirect user to specified redirect URL or root of app
       redirect(next);
     } else {

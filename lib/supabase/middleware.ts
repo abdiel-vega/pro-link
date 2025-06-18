@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
+import { Database } from "@/types/supabase";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -12,7 +13,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -45,17 +46,36 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/pricing")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+  if (user) {
+    // If user is logged in and tries to access login or sign-up, redirect to dashboard
+    if (
+      request.nextUrl.pathname.startsWith("/auth/login") ||
+      request.nextUrl.pathname.startsWith("/auth/sign-up")
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/profile";
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+
+    // If user has no profile, redirect to setup page
+    if (!profile && !request.nextUrl.pathname.startsWith("/dashboard/setup")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/setup";
+      return NextResponse.redirect(url);
+    }
+  } else {
+    // If user is not logged in and tries to access protected routes, redirect to login
+    if (request.nextUrl.pathname.startsWith("/dashboard")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      return NextResponse.redirect(url);
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
