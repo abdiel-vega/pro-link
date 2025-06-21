@@ -6,22 +6,22 @@
 
 @layer base {
   :root {
-    --background: 156 100% 98%;
-    --foreground: 159 74% 6%;
-    --card: 0 0% 100%;
+    --background: 0, 0%, 98%;
+    --foreground: 0, 0%, 20%;
+    --card: 218, 80%, 98%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 154 53% 57%;
+    --primary: 218, 80%, 92%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 134 75% 72%;
+    --secondary: 229, 78%, 84%;
     --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 204 79% 65%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --muted: 0, 0%, 92%;
+    --muted-foreground: 0, 0%, 36%;
+    --accent: 241, 75%, 73%;
+    --accent-foreground: 252, 100%, 98%;
+    --destructive: 7, 73%, 60%;
+    --destructive-foreground: 7, 88%, 96%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
@@ -104,7 +104,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-1 outline-accent;
   }
   body {
     @apply bg-background text-foreground;

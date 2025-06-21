@@ -9,6 +9,7 @@ import {
   Settings,
   Mail,
   Link2,
+  LinkIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -73,14 +74,14 @@ export function DashboardSidebar() {
     <Sidebar variant="inset" className="bg-primary">
       <SidebarHeader>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="hover:bg-slate-100 dark:hover:bg-slate-800 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100">
+          <SidebarMenuItem>              
+            <SidebarMenuButton size="lg" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-sm">
               <a href="/">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Link2 className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <LinkIcon className="size-6 transition-colors duration-200" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Pro-Link</span>
+                <div className="grid flex-1 text-left text-lg leading-tight">
+                  <span className="truncate font-medium transition-colors duration-200">Pro-Link</span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -89,21 +90,22 @@ export function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-slate-600 dark:text-slate-400 font-semibold">
+          <SidebarGroupLabel className="text-foreground font-semibold">
             Dashboard
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
+                <SidebarMenuItem key={item.title}>                  <SidebarMenuButton 
                     asChild 
                     isActive={pathname === item.url}
-                    className="hover:bg-slate-100 dark:hover:bg-slate-800 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100"
+                    className="hover:bg-secondary data-[active=true]:bg-accent transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-sm"
                   >
                     <Link href={item.url}>
-                      <item.icon className="text-slate-600 dark:text-slate-400" />
-                      <span className="text-slate-700 dark:text-slate-300">{item.title}</span>
+                      <item.icon className={`transition-colors duration-200 ${pathname === item.url ? 'text-accent-foreground' : 'text-foreground'}`} />
+                      <span className={`transition-colors duration-200 ${pathname === item.url ? 'text-accent-foreground' : 'text-foreground'}`}>
+                        {item.title}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -112,7 +114,7 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="bg-slate-100 dark:bg-slate-800 border-t">
+      <SidebarFooter className="border-t">
         <NavUser />
       </SidebarFooter>
     </Sidebar>

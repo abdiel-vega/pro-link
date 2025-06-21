@@ -58,6 +58,18 @@ export function ProfileSetupForm() {
     title: "",
     bio: "",
   });
+  // Add debounced username checking
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.username && formData.username.length >= 3) {
+        checkUsernameAvailability(formData.username);
+      } else {
+        setIsUsernameAvailable(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.username]);
 
   // Handle Enter key press to continue to next step
   useEffect(() => {
@@ -120,7 +132,6 @@ export function ProfileSetupForm() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const checkUsernameAvailability = async (username: string) => {
     if (!username || username.length < 3) {
       setIsUsernameAvailable(null);
@@ -131,15 +142,22 @@ export function ProfileSetupForm() {
     const supabase = createClient();
     
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("username")
         .eq("username", username.toLowerCase())
-        .single();
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error checking username:", error);
+        setIsUsernameAvailable(null);
+        return;
+      }
       
       setIsUsernameAvailable(!data);
     } catch (error) {
-      setIsUsernameAvailable(true);
+      console.error("Username check failed:", error);
+      setIsUsernameAvailable(null);
     } finally {
       setCheckingUsername(false);
     }
@@ -160,53 +178,54 @@ export function ProfileSetupForm() {
     const supabase = createClient();
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (!user?.id) {
+      if (userError || !user?.id) {
         throw new Error("User not authenticated");
       }
 
-      // First check if profile already exists
+      console.log("Creating profile for user:", user.id);
+
+      // Check if a complete profile already exists
       const { data: existingProfile, error: checkError } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, username, full_name")
         .eq("id", user.id)
-        .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors when no record exists
+        .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        // PGRST116 is "not found" error, which is expected when profile doesn't exist
         console.error("Error checking existing profile:", checkError);
         throw new Error("Failed to check existing profile");
       }
 
-      if (existingProfile) {
-        // Profile already exists, redirect to dashboard
-        console.log("Profile already exists, redirecting to dashboard");
-        router.push("/overview");
+      // If profile exists and has both username and full_name, redirect
+      if (existingProfile?.username && existingProfile?.full_name) {
+        console.log("Complete profile already exists, redirecting to dashboard");
+        router.push("/dashboard");
         return;
-      }
-
-      // Create the profile with only required fields and let optional fields use database defaults
+      }      // Create the profile data
       const profileData: Database["public"]["Tables"]["profiles"]["Insert"] = {
         id: user.id,
         full_name: formData.fullName,
         username: formData.username.toLowerCase(),
         title: formData.title,
         bio: formData.bio,
-        role: "professional" as Database["public"]["Enums"]["user_role"],
       };
 
+      console.log("Inserting profile data:", profileData);
+
+      // Use upsert to handle existing incomplete profiles
       const { data, error } = await supabase
         .from("profiles")
-        .insert(profileData)
+        .upsert(profileData, { onConflict: 'id' })
         .select();
 
       if (error) {
         console.error("Database error details:", error);
-        throw new Error(`Database error: ${error.message}`);
+        throw new Error(`Failed to create profile: ${error.message}`);
       }
 
-      console.log("Profile created successfully:", data);
+      console.log("Profile created/updated successfully:", data);
       
       // Redirect to dashboard after successful profile creation
       router.push("/dashboard");
@@ -223,7 +242,7 @@ export function ProfileSetupForm() {
   const progress = (currentStep / steps.length) * 100;
 
   return (
-    <Card className="w-full shadow-lg border-0 bg-card/80 backdrop-blur-sm">
+    <Card className="w-full shadow-lg border-0 bg-background backdrop-blur-sm">
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl">Setup Your Profile</CardTitle>
@@ -243,15 +262,15 @@ export function ProfileSetupForm() {
                 key={step.id}
                 className={cn(
                   "flex items-center space-x-2 transition-all duration-300",
-                  isActive && "text-primary",
-                  isCompleted && "text-green-600"
+                  isActive && "text-accent",
+                  isCompleted && "text-green-500"
                 )}
               >
                 <div
                   className={cn(
                     "rounded-full p-1.5 transition-all duration-300",
-                    isActive && "bg-primary text-primary-foreground",
-                    isCompleted && "bg-green-600 text-white",
+                    isActive && "bg-accent text-background",
+                    isCompleted && "bg-green-500 text-background",
                     !isActive && !isCompleted && "bg-muted"
                   )}
                 >
@@ -341,16 +360,16 @@ export function ProfileSetupForm() {
             <div className="space-y-4 animate-in fade-in-50 slide-in-from-right-5 duration-300">
               <div className="text-center space-y-2 mb-6">
                 <div className="flex items-center justify-center gap-2">
-                  <Link className="h-5 w-5 text-primary" />
                   <h3 className="text-lg font-semibold">Claim your ProLink URL</h3>
+                  <Link className="h-5 w-5 text-foreground" />
                 </div>
                 <p className="text-muted-foreground text-sm">
                   Your username will become the URL extension for your professional website page
                 </p>
                 <div className="bg-muted rounded-lg p-3 text-sm">
-                  <span className="text-muted-foreground">Your profile will be available at: </span>
+                  <span className="text-foreground">Your profile will be available at: </span>
                   <br />
-                  <code className="font-mono text-primary">
+                  <code className="font-mono text-foreground transition ease-in-out hover:text-accent">
                     pro-link.co/{formData.username || "your-username"}
                   </code>
                 </div>
@@ -358,10 +377,10 @@ export function ProfileSetupForm() {
 
               {/* Interactive Warning Message - Shows when user starts typing */}
               {showUsernameWarning && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm animate-in fade-in-50 slide-in-from-top-2 duration-200">
+                <div className="bg-destructive-foreground border border-destructive rounded-lg p-3 text-sm animate-in fade-in-50 slide-in-from-top-2 duration-500">
                   <div className="flex items-start gap-2">
-                    <div className="text-amber-600 dark:text-amber-400 mt-0.5">⚠️</div>
-                    <div className="text-amber-800 dark:text-amber-200">
+                    <div className="text-destructive">⚠️</div>
+                    <div className="text-destructive">
                       <p className="font-medium">Choose Carefully!</p>
                       <p className="text-xs mt-1">
                         Your username will be permanent and cannot be changed after account creation. 
