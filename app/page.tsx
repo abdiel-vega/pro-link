@@ -297,19 +297,9 @@ export default function Home() {
               0% commission. Cancel anytime.
           </p>
         </section>
-      </div>
-
-      <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
+      </div>      <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
         <p>
-          Powered by{" "}
-          <a
-            href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-            target="_blank"
-            className="font-bold hover:underline"
-            rel="noreferrer"
-          >
-            Supabase
-          </a>
+          © 2025 Pro-Link. All rights reserved.
         </p>
       </footer>
     </main>

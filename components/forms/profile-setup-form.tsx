@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Check, User, Briefcase, Globe } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, User, Briefcase, Globe, Link2, Link } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Database } from "@/types/supabase";
+import { Database } from "@/lib/types";
 
 interface FormData {
   fullName: string;
@@ -48,17 +48,37 @@ const steps = [
 export function ProfileSetupForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [showUsernameWarning, setShowUsernameWarning] = useState(false);
   const router = useRouter();
-
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
     username: "",
     title: "",
     bio: "",
   });
+
+  // Handle Enter key press to continue to next step
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (currentStep < steps.length) {
+          if (validateStep(currentStep)) {
+            nextStep();
+          }
+        } else {
+          if (validateStep(currentStep) && isUsernameAvailable === true) {
+            handleSubmit();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [currentStep, formData, isUsernameAvailable]);
 
   const updateFormData = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -133,9 +153,7 @@ export function ProfileSetupForm() {
 
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
-  const handleSubmit = async () => {
+  };  const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
 
     setIsLoading(true);
@@ -148,20 +166,55 @@ export function ProfileSetupForm() {
         throw new Error("User not authenticated");
       }
 
-      const { error } = await supabase.from("profiles").insert({
+      // First check if profile already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors when no record exists
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected when profile doesn't exist
+        console.error("Error checking existing profile:", checkError);
+        throw new Error("Failed to check existing profile");
+      }
+
+      if (existingProfile) {
+        // Profile already exists, redirect to dashboard
+        console.log("Profile already exists, redirecting to dashboard");
+        router.push("/overview");
+        return;
+      }
+
+      // Create the profile with only required fields and let optional fields use database defaults
+      const profileData: Database["public"]["Tables"]["profiles"]["Insert"] = {
         id: user.id,
         full_name: formData.fullName,
         username: formData.username.toLowerCase(),
         title: formData.title,
         bio: formData.bio,
-      });
+        role: "professional" as Database["public"]["Enums"]["user_role"],
+      };
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert(profileData)
+        .select();
 
-      router.push("/dashboard/profile");
-    } catch (error) {
+      if (error) {
+        console.error("Database error details:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      console.log("Profile created successfully:", data);
+      
+      // Redirect to dashboard after successful profile creation
+      router.push("/dashboard");
+    } catch (error: any) {
       console.error("Error creating profile:", error);
-      setErrors({ submit: "Failed to create profile. Please try again." });
+      setErrors({ 
+        submit: error.message || "Failed to create profile. Please try again." 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -283,15 +336,16 @@ export function ProfileSetupForm() {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Step 3: Username */}
+          )}          {/* Step 3: Username */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-in fade-in-50 slide-in-from-right-5 duration-300">
               <div className="text-center space-y-2 mb-6">
-                <h3 className="text-lg font-semibold">Claim your ProLink URL</h3>
+                <div className="flex items-center justify-center gap-2">
+                  <Link className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Claim your ProLink URL</h3>
+                </div>
                 <p className="text-muted-foreground text-sm">
-                  Choose a unique username for your professional profile
+                  Your username will become the URL extension for your professional website page
                 </p>
                 <div className="bg-muted rounded-lg p-3 text-sm">
                   <span className="text-muted-foreground">Your profile will be available at: </span>
@@ -302,6 +356,22 @@ export function ProfileSetupForm() {
                 </div>
               </div>
 
+              {/* Interactive Warning Message - Shows when user starts typing */}
+              {showUsernameWarning && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm animate-in fade-in-50 slide-in-from-top-2 duration-200">
+                  <div className="flex items-start gap-2">
+                    <div className="text-amber-600 dark:text-amber-400 mt-0.5">⚠️</div>
+                    <div className="text-amber-800 dark:text-amber-200">
+                      <p className="font-medium">Choose Carefully!</p>
+                      <p className="text-xs mt-1">
+                        Your username will be permanent and cannot be changed after account creation. 
+                        This will be how clients find and access your profile.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="username">Username *</Label>
                 <div className="relative">
@@ -311,6 +381,12 @@ export function ProfileSetupForm() {
                     onChange={(e) => {
                       const value = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
                       updateFormData("username", value);
+                      
+                      // Show warning when user starts typing
+                      if (value.length > 0 && !showUsernameWarning) {
+                        setShowUsernameWarning(true);
+                      }
+                      
                       if (value.length >= 3) {
                         checkUsernameAvailability(value);
                       }

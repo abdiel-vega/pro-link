@@ -18,6 +18,7 @@ export interface Database {
           bio: string;
           avatar_url: string;
           phone_number: string;
+          role: Database["public"]["Enums"]["user_role"];
           created_at: string;
           stripe_account_id: string;
           stripe_customer_id: string;
@@ -33,6 +34,7 @@ export interface Database {
           bio?: string;
           avatar_url?: string;
           phone_number?: string;
+          role?: Database["public"]["Enums"]["user_role"];
           created_at?: string;
           stripe_account_id?: string;
           stripe_customer_id?: string;
@@ -48,6 +50,7 @@ export interface Database {
           bio?: string;
           avatar_url?: string;
           phone_number?: string;
+          role?: Database["public"]["Enums"]["user_role"];
           created_at?: string;
           stripe_account_id?: string;
           stripe_customer_id?: string;
@@ -56,35 +59,44 @@ export interface Database {
           subscription_ends_at?: string;
         };
       };
-      clients: {
+      bookings: {
         Row: {
           id: string;
+          client_id: string;
           professional_profile_id: string;
           service_id: string;
-          client_email: string;
-          phone_number: string;
-          amount_paid: number;
+          booking_start_time: string;
+          booking_end_time: string;
+          status: Database["public"]["Enums"]["booking_status"];
+          amount_paid_in_cents: number;
           stripe_charge_id: string;
+          notes: string;
           created_at: string;
         };
         Insert: {
           id?: string;
+          client_id: string;
           professional_profile_id: string;
           service_id: string;
-          client_email: string;
-          phone_number?: string;
-          amount_paid: number;
-          stripe_charge_id: string;
+          booking_start_time: string;
+          booking_end_time: string;
+          status?: Database["public"]["Enums"]["booking_status"];
+          amount_paid_in_cents: number;
+          stripe_charge_id?: string;
+          notes?: string;
           created_at?: string;
         };
         Update: {
           id?: string;
+          client_id?: string;
           professional_profile_id?: string;
           service_id?: string;
-          client_email?: string;
-          phone_number?: string;
-          amount_paid?: number;
+          booking_start_time?: string;
+          booking_end_time?: string;
+          status?: Database["public"]["Enums"]["booking_status"];
+          amount_paid_in_cents?: number;
           stripe_charge_id?: string;
+          notes?: string;
           created_at?: string;
         };
       };
@@ -92,28 +104,51 @@ export interface Database {
         Row: {
           id: string;
           profile_id: string;
+          category_id: string;
           title: string;
           description: string;
-          price: number;
+          price_in_cents: number;
+          duration_in_minutes: number;
           is_active: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
           profile_id: string;
+          category_id: string;
           title: string;
           description?: string;
-          price: number;
+          price_in_cents: number;
+          duration_in_minutes: number;
           is_active?: boolean;
           created_at?: string;
         };
         Update: {
           id?: string;
           profile_id?: string;
+          category_id?: string;
           title?: string;
           description?: string;
-          price?: number;
+          price_in_cents?: number;
+          duration_in_minutes?: number;
           is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      categories: {
+        Row: {
+          id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
           created_at?: string;
         };
       };
@@ -125,7 +160,8 @@ export interface Database {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      user_role: "professional" | "client";
+      booking_status: "pending" | "confirmed" | "completed" | "cancelled";
     };
   };
 }

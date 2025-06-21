@@ -1,10 +1,8 @@
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
-import { hasEnvVars } from "@/lib/utils";
 import { Home, Tag } from "lucide-react";
 import Link from "next/link";
-import { EnvVarWarning } from "./env-var-warning";
 
 export function Navbar() {
   return (
@@ -29,7 +27,7 @@ export function Navbar() {
             </Link>
           </Button>
           <div className="h-6 border-l" />
-          {hasEnvVars ? <AuthButton /> : <EnvVarWarning />}
+          <AuthButton />
           <ThemeSwitcher />
         </div>
       </div>
